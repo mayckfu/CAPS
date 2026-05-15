@@ -1,0 +1,49 @@
+:root {
+  /* Cores principais */
+  --navy: #1A2B4A;
+  --navy-dark: #111E35;
+  --navy-hover: #243558;
+  --blue: #1565C0;
+  --blue-hover: #0D47A1;
+  --blue-light: #E3F0FF;
+  --teal: #0097A7;
+  --teal-hover: #00838F;
+  --teal-light: #E0F7FA;
+
+  /* Backgrounds */
+  --bg-page: #EEF1F6;
+  --bg-card: #FFFFFF;
+  --bg-hover: #F4F6FA;
+
+  /* Bordas */
+  --border: #DDE3ED;
+  --border-strong: #B8C4D8;
+
+  /* Texto */
+  --text-primary: #1A2B4A;
+  --text-secondary: #4A5568;
+  --text-muted: #8A96A8;
+
+  /* Status */
+  --success: #2E7D32;
+  --success-light: #E8F5E9;
+  --danger: #C62828;
+  --danger-light: #FFEBEE;
+  --warning: #E65100;
+  --warning-light: #FFF3E0;
+
+  /* Sombras */
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.10);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.12);
+
+  /* Raios */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+
+  /* Sidebar */
+  --sidebar-w: 220px;
+  --sidebar-collapsed-w: 72px;
+  --header-h: 0px;
+}

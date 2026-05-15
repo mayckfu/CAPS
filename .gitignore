@@ -7,10 +7,23 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
+# Dependencies
 node_modules
+.pnp
+.pnp.js
+.npm-cache
+.yarn-cache
+
+# Testing
+coverage
+test-results/
+playwright-report/
+blob-report/
+
+# Production
 dist
 dist-ssr
-*.local
+.vercel
 
 # Environment Variables
 .env
@@ -24,6 +37,7 @@ dist-ssr
 *-key.json
 secrets.json
 .firebase/
+firebase-debug.log
 
 # Editor directories and files
 .vscode/*

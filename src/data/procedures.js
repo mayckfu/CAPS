@@ -68,6 +68,14 @@ export const BPA_CONSOLIDADO = [
   ],
 ];
 
+export const ALL_DAY_PROCEDURES = [
+  ...RAAS_LEFT,
+  ...RAAS_RIGHT,
+  ...BPA_IND_LEFT,
+  ...BPA_IND_RIGHT,
+  ...BPA_CONSOLIDADO.flat()
+];
+
 // Row/col keys helpers
 export function dayKey(code, day) { return `${code}_d${day}`; }
 export function bpaKey(code, col) { return `${code}_b${col}`; }

@@ -1,18 +1,26 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, lazy, Suspense } from 'react';
 import AppShell from './components/layout/AppShell';
 import AuthScreen from './components/auth/AuthScreen';
-import CitizenSearch from './components/patients/CitizenSearch';
-import PatientForm from './components/patients/PatientForm';
-import RecordForm from './components/records/RecordForm';
-import PrintTemplate from './components/records/PrintTemplate';
-import ProfessionalList from './components/professionals/ProfessionalList';
-import ProfessionalForm from './components/professionals/ProfessionalForm';
-import UserProfileModal from './components/ui/UserProfileModal';
-import PrivacyModal from './components/auth/PrivacyModal';
-import HelpView from './components/ui/HelpView';
-import ReportsView from './components/records/ReportsView';
 import { watchAuth } from './services/auth';
-import { ensureDatabaseProfile, promoteUserToAdmin, subscribeToProfile } from './services/db';
+import { ensureDatabaseProfile, subscribeToProfile } from './services/db';
+
+// Lazy load heavy views and modals
+const CitizenSearch = lazy(() => import('./components/patients/CitizenSearch'));
+const PatientForm = lazy(() => import('./components/patients/PatientForm'));
+const RecordForm = lazy(() => import('./components/records/RecordForm'));
+const PrintTemplate = lazy(() => import('./components/records/PrintTemplate'));
+const ProfessionalList = lazy(() => import('./components/professionals/ProfessionalList'));
+const ProfessionalForm = lazy(() => import('./components/professionals/ProfessionalForm'));
+const UserProfileModal = lazy(() => import('./components/ui/UserProfileModal'));
+const PrivacyModal = lazy(() => import('./components/auth/PrivacyModal'));
+const HelpView = lazy(() => import('./components/ui/HelpView'));
+const ReportsView = lazy(() => import('./components/records/ReportsView'));
+
+const ViewLoader = () => (
+  <div style={{ padding: '40px', textAlign: 'center', color: '#64748b' }}>
+    <p>Carregando ferramenta...</p>
+  </div>
+);
 
 export default function App() {
   const [state, setState] = useState({ view: 'citizens' });
@@ -23,8 +31,6 @@ export default function App() {
   const [authReady, setAuthReady] = useState(false);
   const [searchContext, setSearchContext] = useState({ query: '', results: [], searched: false });
   const go = (view, extras = {}) => setState({ view, ...extras });
-
-
 
   useEffect(() => {
     let unsubProfile = null;
@@ -77,31 +83,37 @@ export default function App() {
   return (
     <>
       <div id="print-frame">
-        {printData?.items?.map((item, index) => (
-          <PrintTemplate
-            key={`${item.patient?.id || 'patient'}-${item.record?.id || index}`}
-            patient={item.patient}
-            record={item.record}
-          />
-        ))}
+        <Suspense fallback={null}>
+          {printData?.items?.map((item, index) => (
+            <PrintTemplate
+              key={`${item.patient?.id || 'patient'}-${item.record?.id || index}`}
+              patient={item.patient}
+              record={item.record}
+            />
+          ))}
+        </Suspense>
       </div>
 
       <div id="app-shell">
         {user && profile && !profile.acceptedTermsAt && (
-          <PrivacyModal 
-            profile={profile} 
-            onAccept={() => {
-              // O listener subscribeToProfile atualizará o estado automaticamente
-            }} 
-          />
+          <Suspense fallback={null}>
+            <PrivacyModal 
+              profile={profile} 
+              onAccept={() => {
+                // O listener subscribeToProfile atualizará o estado automaticamente
+              }} 
+            />
+          </Suspense>
         )}
 
         {showProfile && (
-          <UserProfileModal 
-            user={user} 
-            profile={profile} 
-            onClose={() => setShowProfile(false)} 
-          />
+          <Suspense fallback={null}>
+            <UserProfileModal 
+              user={user} 
+              profile={profile} 
+              onClose={() => setShowProfile(false)} 
+            />
+          </Suspense>
         )}
 
         <AppShell 
@@ -111,56 +123,58 @@ export default function App() {
           onViewChange={v => go(v)} 
           currentView={state.view}
         >
-          {state.view === 'citizens' && (
-            <CitizenSearch
-              initialContext={searchContext}
-              onSearchUpdate={setSearchContext}
-              onNewPatient={() => go('patient-form')}
-              onSelectPatient={p => go('patient-form', { patient: p })}
-              onNewRecord={p => go('record-form', { patient: p })}
-              onSelectRecord={(p, r) => go('record-form', { patient: p, record: r })}
-              onOpenMedicalRecord={p => go('patient-form', { patient: p })}
-              onPrint={handlePrint}
-            />
-          )}
+          <Suspense fallback={<ViewLoader />}>
+            {state.view === 'citizens' && (
+              <CitizenSearch
+                initialContext={searchContext}
+                onSearchUpdate={setSearchContext}
+                onNewPatient={() => go('patient-form')}
+                onSelectPatient={p => go('patient-form', { patient: p })}
+                onNewRecord={p => go('record-form', { patient: p })}
+                onSelectRecord={(p, r) => go('record-form', { patient: p, record: r })}
+                onOpenMedicalRecord={p => go('patient-form', { patient: p })}
+                onPrint={handlePrint}
+              />
+            )}
 
-          {state.view === 'patient-form' && (
-            <PatientForm
-              patient={state.patient}
-              profile={profile}
-              onBack={() => go('citizens')}
-              onSaved={() => go('citizens')}
-            />
-          )}
+            {state.view === 'patient-form' && (
+              <PatientForm
+                patient={state.patient}
+                profile={profile}
+                onBack={() => go('citizens')}
+                onSaved={() => go('citizens')}
+              />
+            )}
 
-          {state.view === 'record-form' && (
-            <RecordForm
-              patient={state.patient}
-              record={state.record}
-              profile={profile}
-              onBack={() => go('citizens')}
-              onSaved={saved => setState(prev => ({ ...prev, record: saved }))}
-            />
-          )}
+            {state.view === 'record-form' && (
+              <RecordForm
+                patient={state.patient}
+                record={state.record}
+                profile={profile}
+                onBack={() => go('citizens')}
+                onSaved={saved => setState(prev => ({ ...prev, record: saved }))}
+              />
+            )}
 
-          {state.view === 'professionals' && (
-            <ProfessionalList 
-              onNew={() => go('prof-form')} 
-              onEdit={p => go('prof-form', { professional: p })}
-            />
-          )}
+            {state.view === 'professionals' && (
+              <ProfessionalList 
+                onNew={() => go('prof-form')} 
+                onEdit={p => go('prof-form', { professional: p })}
+              />
+            )}
 
-          {state.view === 'prof-form' && (
-            <ProfessionalForm 
-              professional={state.professional}
-              onBack={() => go('professionals')}
-              onSaved={() => go('professionals')}
-            />
-          )}
+            {state.view === 'prof-form' && (
+              <ProfessionalForm 
+                professional={state.professional}
+                onBack={() => go('professionals')}
+                onSaved={() => go('professionals')}
+              />
+            )}
 
-          {state.view === 'help' && <HelpView />}
-          
-          {state.view === 'reports' && <ReportsView onPrintBatch={handlePrintBatch} />}
+            {state.view === 'help' && <HelpView />}
+            
+            {state.view === 'reports' && <ReportsView onPrintBatch={handlePrintBatch} />}
+          </Suspense>
         </AppShell>
       </div>
     </>
