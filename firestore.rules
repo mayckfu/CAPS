@@ -27,11 +27,28 @@ service cloud.firestore {
       ];
     }
 
+    function userEditableProfileFields() {
+      return [
+        'email',
+        'mustChangePassword',
+        'providerId',
+        'schemaVersion',
+        'updatedAt'
+      ];
+    }
+
+    function onlyUserEditableProfileFieldsChanged() {
+      return request.resource.data.diff(resource.data).changedKeys().hasOnly(userEditableProfileFields())
+        && request.resource.data.diff(resource.data).addedKeys().hasOnly(userEditableProfileFields())
+        && request.resource.data.diff(resource.data).removedKeys().hasOnly([]);
+    }
+
     // Perfis individuais de usuario (metadados e configuracoes)
     match /users/{uid} {
       allow get: if ownsUserDoc(uid) || isAdmin();
       allow list: if isAdmin();
-      allow create, update: if ownsUserDoc(uid) || isAdmin();
+      allow create: if ownsUserDoc(uid) || isAdmin();
+      allow update: if isAdmin() || (ownsUserDoc(uid) && onlyUserEditableProfileFieldsChanged());
       allow delete: if false;
     }
 
