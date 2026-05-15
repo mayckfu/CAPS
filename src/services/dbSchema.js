@@ -8,6 +8,7 @@ export const COLLECTIONS = {
   clinicalEntries: 'clinicalEntries',
   professionals: 'professionals',
   auditLogs: 'auditLogs',
+  loginIdentifiers: 'loginIdentifiers',
 };
 
 export const ENTITY_TYPES = {
@@ -91,5 +92,6 @@ export function normalizeProfessional(prof, uid) {
     role: prof.role || 'professional',
     mustChangePassword: prof.mustChangePassword ?? false,
     email: prof.email?.toLowerCase().trim() || '',
+    cpfDigits: onlyDigits(prof.cpf),
   }, uid);
 }

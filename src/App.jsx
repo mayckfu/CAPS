@@ -137,6 +137,7 @@ export default function App() {
             <RecordForm
               patient={state.patient}
               record={state.record}
+              profile={profile}
               onBack={() => go('citizens')}
               onSaved={saved => setState(prev => ({ ...prev, record: saved }))}
             />

@@ -17,6 +17,7 @@ import {
   ENTITY_TYPES,
   normalizeAppointment,
   normalizeClinicalEntry,
+  onlyDigits,
   normalizePatient,
   normalizeProfessional,
   normalizeRecord,
@@ -50,6 +51,34 @@ function withTimestamps(entity) {
 
 function userRootDoc() {
   return doc(firestore, 'users', requireUserId());
+}
+
+async function findLegacyProfessionalForUser(user) {
+  const matches = [];
+  if (user.uid) {
+    const uidSnap = await getDocs(query(sharedCollection(COLLECTIONS.professionals), where('uid', '==', user.uid)));
+    matches.push(...uidSnap.docs.map(item => ({ id: item.id, ...item.data() })));
+  }
+
+  const email = user.email?.toLowerCase().trim();
+  if (email) {
+    const emailSnap = await getDocs(query(sharedCollection(COLLECTIONS.professionals), where('email', '==', email)));
+    matches.push(...emailSnap.docs.map(item => ({ id: item.id, ...item.data() })));
+  }
+
+  return matches.find(item => item.isDeleted !== true) || null;
+}
+
+async function saveLoginIdentifier(prof) {
+  const cpfDigits = onlyDigits(prof.cpf);
+  const email = prof.email?.toLowerCase().trim();
+  if (!cpfDigits || !email) return;
+
+  await setDoc(sharedDoc(COLLECTIONS.loginIdentifiers, cpfDigits), {
+    email,
+    uid: prof.uid || prof.id || '',
+    updatedAt: new Date().toISOString(),
+  }, { merge: true });
 }
 
 function normalizeEntity(name, entity, uid) {
@@ -111,17 +140,26 @@ export async function ensureDatabaseProfile(user) {
   if (!user) return null;
   const ref = userRootDoc();
   const snap = await getDoc(ref);
+  const existing = snap.exists() ? snap.data() : {};
+  const legacyProfessional = await findLegacyProfessionalForUser(user).catch(err => {
+    console.warn('Nao foi possivel buscar cadastro legado do profissional:', err);
+    return null;
+  });
   const now = new Date().toISOString();
   const payload = {
     uid: user.uid,
     email: user.email || '',
-    displayName: snap.exists() ? snap.data().displayName : (user.displayName || ''),
-    role: snap.exists() ? (snap.data().role || 'professional') : 'admin',
-    mustChangePassword: snap.exists() ? (snap.data().mustChangePassword ?? false) : false,
+    displayName: existing.displayName || legacyProfessional?.displayName || user.displayName || '',
+    cpf: existing.cpf || legacyProfessional?.cpf || '',
+    cpfDigits: existing.cpfDigits || legacyProfessional?.cpfDigits || onlyDigits(legacyProfessional?.cpf),
+    cns: existing.cns || legacyProfessional?.cns || '',
+    cbo: existing.cbo || legacyProfessional?.cbo || '',
+    role: snap.exists() ? (existing.role || 'professional') : (legacyProfessional?.role || 'admin'),
+    mustChangePassword: user.mustChangePassword ?? (snap.exists() ? (existing.mustChangePassword ?? false) : (legacyProfessional?.mustChangePassword ?? false)),
     providerId: user.providerData?.[0]?.providerId || 'password',
     schemaVersion: DATA_SCHEMA_VERSION,
     updatedAt: now,
-    createdAt: snap.exists() ? snap.data().createdAt : now,
+    createdAt: existing.createdAt || now,
   };
   await setDoc(ref, payload, { merge: true });
   return payload;
@@ -319,19 +357,46 @@ export async function getProfessionals() {
 }
 
 export async function saveProfessional(prof) {
+  const normalizedInput = {
+    ...prof,
+    cpfDigits: onlyDigits(prof.cpf),
+  };
+
   if (prof.sourceCollection === COLLECTIONS.users || prof.uid) {
     const uid = prof.uid || prof.id;
     if (uid) {
       const payload = {
-        ...prof,
+        ...normalizedInput,
         id: uid,
         uid,
       };
       delete payload.sourceCollection;
-      return saveEntity(COLLECTIONS.users, payload, ENTITY_TYPES.professional);
+      const saved = await saveEntity(COLLECTIONS.users, payload, ENTITY_TYPES.professional);
+      await saveLoginIdentifier(saved);
+      return saved;
     }
   }
-  return saveEntity(COLLECTIONS.professionals, prof, ENTITY_TYPES.professional);
+  const saved = await saveEntity(COLLECTIONS.professionals, normalizedInput, ENTITY_TYPES.professional);
+  await saveLoginIdentifier(saved);
+  return saved;
+}
+
+export async function resolveLoginEmail(identifier) {
+  const value = String(identifier || '').trim();
+  if (!value) return '';
+  if (value.includes('@')) return value.toLowerCase();
+
+  const cpfDigits = onlyDigits(value);
+  if (cpfDigits.length !== 11) {
+    throw new Error('Informe um CPF com 11 digitos ou um e-mail valido.');
+  }
+
+  const snap = await getDoc(sharedDoc(COLLECTIONS.loginIdentifiers, cpfDigits));
+  if (!snap.exists() || !snap.data()?.email) {
+    throw new Error('CPF nao encontrado. Procure o administrador para conferir seu cadastro.');
+  }
+
+  return snap.data().email;
 }
 
 export async function deleteProfessional(professional) {

@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { ArrowLeft, Save, ChevronDown, ChevronUp, CheckCircle, User, CalendarCheck, X, Search, ClipboardList } from 'lucide-react';
 import { saveRecord } from '../../services/db';
 import {
@@ -227,11 +227,32 @@ function QuickDailyModal({ data, onClose, onApply }) {
   );
 }
 
-export default function RecordForm({ patient, record: initial, onBack, onSaved }) {
+function professionalDefaults(profile) {
+  return {
+    nomeProfissional: profile?.displayName || '',
+    cartaoSusProfissional: profile?.cns || '',
+    cbo: profile?.cbo || '',
+  };
+}
+
+function mergeMissingProfessionalData(record, profile) {
+  const defaults = professionalDefaults(profile);
+  return {
+    ...record,
+    nomeProfissional: record.nomeProfissional || defaults.nomeProfissional,
+    cartaoSusProfissional: record.cartaoSusProfissional || defaults.cartaoSusProfissional,
+    cbo: record.cbo || defaults.cbo,
+  };
+}
+
+export default function RecordForm({ patient, record: initial, profile, onBack, onSaved }) {
   const [sections, setSections] = useState({ prof: true, clinical: true, raas: false, bpaInd: false, bpaCons: false });
   const toggle = k => setSections(prev => ({ ...prev, [k]: !prev[k] }));
 
-  const [form, setForm] = useState(initial || { ...buildEmptyData(), mesRef: currentMesRef() });
+  const [form, setForm] = useState(() => mergeMissingProfessionalData(
+    initial || { ...buildEmptyData(), mesRef: currentMesRef() },
+    profile
+  ));
   const [quickOpen, setQuickOpen] = useState(false);
   const set = (k, v) => setForm(prev => ({ ...prev, [k]: v }));
   const today = todayInputValue();
@@ -245,6 +266,10 @@ export default function RecordForm({ patient, record: initial, onBack, onSaved }
     clearTimeout(toastTimer.current);
     toastTimer.current = setTimeout(() => setToast(null), 2500);
   }
+
+  useEffect(() => {
+    setForm(prev => mergeMissingProfessionalData(prev, profile));
+  }, [profile?.displayName, profile?.cns, profile?.cbo]);
 
   async function handleSave() {
     const saved = await saveRecord({ ...form, patientId: patient.id });

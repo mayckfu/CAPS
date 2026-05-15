@@ -20,10 +20,10 @@ function getAuthErrorMessage(error) {
 }
 
 export default function AuthScreen() {
-  const rememberedEmail = localStorage.getItem('capsRememberedEmail') || '';
-  const [email, setEmail] = useState(rememberedEmail);
+  const rememberedLogin = localStorage.getItem('capsRememberedLogin') || localStorage.getItem('capsRememberedEmail') || '';
+  const [login, setLogin] = useState(rememberedLogin);
   const [password, setPassword] = useState('');
-  const [rememberMe, setRememberMe] = useState(Boolean(rememberedEmail));
+  const [rememberMe, setRememberMe] = useState(Boolean(rememberedLogin));
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -33,10 +33,12 @@ export default function AuthScreen() {
     setLoading(true);
 
     try {
-      await loginWithEmail(email, password);
+      await loginWithEmail(login, password);
       if (rememberMe) {
-        localStorage.setItem('capsRememberedEmail', email.trim());
+        localStorage.setItem('capsRememberedLogin', login.trim());
+        localStorage.removeItem('capsRememberedEmail');
       } else {
+        localStorage.removeItem('capsRememberedLogin');
         localStorage.removeItem('capsRememberedEmail');
       }
     } catch (err) {
@@ -62,20 +64,19 @@ export default function AuthScreen() {
 
           <h1>Entrar no sistema</h1>
           <p className="auth-copy">
-            Acesse com e-mail e senha para salvar os dados no Firebase com seguranca por usuario.
+            Acesse com CPF e senha. O e-mail fica reservado para recuperacao de senha.
           </p>
 
           {error && <div className="auth-error">{error}</div>}
 
           <form onSubmit={handleSubmit} className="auth-form">
             <label>
-              E-mail
+              CPF ou e-mail
               <input
                 className="input"
-                type="email"
-                value={email}
-                onChange={event => setEmail(event.target.value)}
-                placeholder="usuario@email.com"
+                value={login}
+                onChange={event => setLogin(event.target.value)}
+                placeholder="000.000.000-00"
                 required
               />
             </label>

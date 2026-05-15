@@ -2,6 +2,9 @@ import React, { useState } from 'react';
 import { X, Save, Key, User, Mail, AlertTriangle } from 'lucide-react';
 import { updateUserEmail, updateUserPassword } from '../../services/auth';
 import { ensureDatabaseProfile } from '../../services/db';
+import { doc, setDoc } from 'firebase/firestore';
+import { firestore } from '../../services/firebase';
+import { COLLECTIONS, onlyDigits } from '../../services/dbSchema';
 
 const Field = ({ label, children }) => (
   <div className="profile-field">
@@ -14,12 +17,15 @@ export default function UserProfileModal({ user, profile, onClose }) {
   const [form, setForm] = useState({
     displayName: profile?.displayName || '',
     email: profile?.email || user?.email || '',
+    cns: profile?.cns || '',
+    cbo: profile?.cbo || '',
     password: '',
     confirmPassword: ''
   });
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
+  const canEditProfessionalData = profile?.role === 'admin';
 
   const set = (k, v) => setForm(p => ({ ...p, [k]: v }));
 
@@ -29,12 +35,28 @@ export default function UserProfileModal({ user, profile, onClose }) {
     setSuccess(null);
 
     try {
-      if (form.displayName !== profile?.displayName) {
-        await ensureDatabaseProfile({ ...user, displayName: form.displayName });
+      const updates = {};
+      if (canEditProfessionalData && form.displayName !== profile?.displayName) updates.displayName = form.displayName;
+      if (canEditProfessionalData && form.cns !== profile?.cns) updates.cns = form.cns;
+      if (canEditProfessionalData && form.cbo !== profile?.cbo) updates.cbo = form.cbo;
+
+      if (Object.keys(updates).length > 0) {
+        await setDoc(doc(firestore, 'users', user.uid), updates, { merge: true });
       }
 
       if (form.email !== user?.email) {
         await updateUserEmail(form.email);
+        const nextEmail = form.email.trim().toLowerCase();
+        await setDoc(doc(firestore, 'users', user.uid), { email: nextEmail }, { merge: true });
+
+        const cpfDigits = profile?.cpfDigits || onlyDigits(profile?.cpf);
+        if (cpfDigits) {
+          await setDoc(doc(firestore, COLLECTIONS.loginIdentifiers, cpfDigits), {
+            email: nextEmail,
+            uid: user.uid,
+            updatedAt: new Date().toISOString(),
+          }, { merge: true });
+        }
       }
 
       if (form.password) {
@@ -47,6 +69,7 @@ export default function UserProfileModal({ user, profile, onClose }) {
         await updateUserPassword(form.password);
 
         if (profile?.mustChangePassword) {
+          await setDoc(doc(firestore, 'users', user.uid), { mustChangePassword: false }, { merge: true });
           await ensureDatabaseProfile({ ...user, mustChangePassword: false });
         }
       }
@@ -93,7 +116,7 @@ export default function UserProfileModal({ user, profile, onClose }) {
           <Field label="Nome completo">
             <div className="input-with-icon">
               <User size={16} className="field-icon" />
-              <input className="input" value={form.displayName} onChange={e => set('displayName', e.target.value)} placeholder="Seu nome" />
+              <input className="input" value={form.displayName} onChange={e => set('displayName', e.target.value)} placeholder="Seu nome" readOnly={!canEditProfessionalData} />
             </div>
           </Field>
 
@@ -103,6 +126,16 @@ export default function UserProfileModal({ user, profile, onClose }) {
               <input className="input" type="email" value={form.email} onChange={e => set('email', e.target.value)} placeholder="email@exemplo.com" />
             </div>
           </Field>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+            <Field label="Cartão SUS (CNS)">
+              <input className="input" value={form.cns} onChange={e => set('cns', e.target.value)} placeholder="000 0000 0000 0000" readOnly={!canEditProfessionalData} />
+            </Field>
+
+            <Field label="CBO">
+              <input className="input" value={form.cbo} onChange={e => set('cbo', e.target.value)} placeholder="CBO" readOnly={!canEditProfessionalData} />
+            </Field>
+          </div>
 
           <Field label="Cargo (não editável)">
             <div className="profile-readonly-field">

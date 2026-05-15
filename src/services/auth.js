@@ -9,7 +9,7 @@ import {
 } from 'firebase/auth';
 import { getApp, getApps, initializeApp } from 'firebase/app';
 import { auth, firebaseConfig } from './firebase';
-import { ensureDatabaseProfile } from './db';
+import { ensureDatabaseProfile, resolveLoginEmail } from './db';
 
 function withTimeout(promise, timeoutMs, label) {
   let timeoutId;
@@ -35,7 +35,13 @@ export function watchAuth(callback) {
   });
 }
 
-export async function loginWithEmail(email, password) {
+export async function loginWithEmail(identifier, password) {
+  const email = await withTimeout(
+    resolveLoginEmail(identifier),
+    10000,
+    'Busca do login'
+  );
+
   const credential = await withTimeout(
     signInWithEmailAndPassword(auth, email, password),
     15000,

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { ChevronLeft, Save, Shield, User, Copy, CreditCard, Lock, AtSign, Briefcase, CheckCircle } from 'lucide-react';
 import { saveProfessional } from '../../services/db';
 import { createProfessionalAuthAccount } from '../../services/auth';
+import { onlyDigits } from '../../services/dbSchema';
 
 const Field = ({ label, required, children }) => (
   <div style={{ marginBottom: 20 }}>
@@ -33,6 +34,7 @@ export default function ProfessionalForm({ professional, onBack, onSaved }) {
   const [form, setForm] = useState(professional || {
     displayName: '',
     email: '',
+    cpf: '',
     cns: '',
     cbo: '',
     role: 'professional',
@@ -50,7 +52,7 @@ export default function ProfessionalForm({ professional, onBack, onSaved }) {
 
   async function copyCredentials() {
     if (!createdCredentials) return;
-    const text = `Acesso CAPS AD\nE-mail: ${createdCredentials.email}\nSenha temporaria: ${createdCredentials.password}`;
+    const text = `Acesso CAPS AD\nCPF: ${createdCredentials.cpf || '-'}\nSenha temporaria: ${createdCredentials.password}\nE-mail de recuperacao: ${createdCredentials.email}`;
     await navigator.clipboard.writeText(text);
     alert('Credenciais copiadas.');
   }
@@ -58,8 +60,13 @@ export default function ProfessionalForm({ professional, onBack, onSaved }) {
   async function handleSaveOld() {
     return handleSave();
   /*
-    if (!form.displayName || !form.email) {
-      alert('Por favor, preencha o Nome e o E-mail.');
+    if (!form.displayName || !form.email || !form.cpf) {
+      alert('Por favor, preencha Nome, CPF e E-mail.');
+      return;
+    }
+
+    if (onlyDigits(form.cpf).length !== 11) {
+      alert('Informe um CPF valido com 11 digitos.');
       return;
     }
 
@@ -88,8 +95,13 @@ export default function ProfessionalForm({ professional, onBack, onSaved }) {
   }
 
   async function handleSave() {
-    if (!form.displayName || !form.email) {
-      alert('Por favor, preencha o Nome e o E-mail.');
+    if (!form.displayName || !form.email || !form.cpf) {
+      alert('Por favor, preencha Nome, CPF e E-mail.');
+      return;
+    }
+
+    if (onlyDigits(form.cpf).length !== 11) {
+      alert('Informe um CPF valido com 11 digitos.');
       return;
     }
 
@@ -108,6 +120,7 @@ export default function ProfessionalForm({ professional, onBack, onSaved }) {
         payload.id = authUser.uid;
         payload.uid = authUser.uid;
         payload.email = authUser.email || form.email.trim();
+        payload.cpfDigits = onlyDigits(form.cpf);
         payload.providerId = 'password';
         payload.mustChangePassword = true;
       }
@@ -118,6 +131,7 @@ export default function ProfessionalForm({ professional, onBack, onSaved }) {
         setCreatedCredentials({
           name: form.displayName,
           email: payload.email,
+          cpf: form.cpf,
           password: tempPassword,
         });
         return;
@@ -191,11 +205,14 @@ export default function ProfessionalForm({ professional, onBack, onSaved }) {
                   Usuario criado com sucesso
                 </h2>
                 <p style={{ margin: '0 0 16px', fontSize: 13, color: '#166534' }}>
-                  Entregue estes dados ao profissional. Esta senha aparece somente agora.
+                  Entregue estes dados ao profissional. O login e feito pelo CPF; esta senha aparece somente agora.
                 </p>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 180px', gap: 12, alignItems: 'end' }}>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                    <Field label="E-mail de acesso">
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
+                    <Field label="CPF de acesso">
+                      <input className="input" readOnly value={createdCredentials.cpf || ''} style={{ height: 44, borderRadius: 10, background: '#fff', fontWeight: 800 }} />
+                    </Field>
+                    <Field label="E-mail de recuperacao">
                       <input className="input" readOnly value={createdCredentials.email} style={{ height: 44, borderRadius: 10, background: '#fff' }} />
                     </Field>
                     <Field label="Senha temporaria">
@@ -237,19 +254,34 @@ export default function ProfessionalForm({ professional, onBack, onSaved }) {
                 </div>
               </Field>
 
-              <Field label="E-mail de Login (Acesso ao Sistema)" required>
-                <div className="input-with-icon">
-                  <AtSign size={16} className="field-icon" color="#94a3b8" />
-                  <input 
-                    className="input" 
-                    type="email" 
-                    value={form.email} 
-                    onChange={e => set('email', e.target.value)} 
-                    placeholder="nome.sobrenome@caps.gov.br"
-                    style={{ height: 46, borderRadius: 10, fontSize: 14 }}
-                  />
-                </div>
-              </Field>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+                <Field label="CPF de Login" required>
+                  <div className="input-with-icon">
+                    <CreditCard size={16} className="field-icon" color="#94a3b8" />
+                    <input 
+                      className="input" 
+                      value={form.cpf || ''} 
+                      onChange={e => set('cpf', e.target.value)} 
+                      placeholder="000.000.000-00" 
+                      style={{ height: 46, borderRadius: 10, fontSize: 14 }}
+                    />
+                  </div>
+                </Field>
+
+                <Field label="E-mail de Recuperacao" required>
+                  <div className="input-with-icon">
+                    <AtSign size={16} className="field-icon" color="#94a3b8" />
+                    <input 
+                      className="input" 
+                      type="email" 
+                      value={form.email} 
+                      onChange={e => set('email', e.target.value)} 
+                      placeholder="nome.sobrenome@caps.gov.br"
+                      style={{ height: 46, borderRadius: 10, fontSize: 14 }}
+                    />
+                  </div>
+                </Field>
+              </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
                 <Field label="Nível de Permissão">
