@@ -8,7 +8,7 @@ import { ensureDatabaseProfile, subscribeToProfile } from './services/db';
 const CitizenSearch = lazy(() => import('./components/patients/CitizenSearch'));
 const PatientForm = lazy(() => import('./components/patients/PatientForm'));
 const RecordForm = lazy(() => import('./components/records/RecordForm'));
-const PrintTemplate = lazy(() => import('./components/records/PrintTemplate'));
+import PrintTemplate from './components/records/PrintTemplate';
 const ProfessionalList = lazy(() => import('./components/professionals/ProfessionalList'));
 const ProfessionalForm = lazy(() => import('./components/professionals/ProfessionalForm'));
 const UserProfileModal = lazy(() => import('./components/ui/UserProfileModal'));
@@ -66,6 +66,12 @@ export default function App() {
     setPrint({ items: [{ patient, record }] });
     setTimeout(() => window.print(), 300);
   }
+
+  useEffect(() => {
+    const handleAfterPrint = () => setPrint(null);
+    window.addEventListener('afterprint', handleAfterPrint);
+    return () => window.removeEventListener('afterprint', handleAfterPrint);
+  }, []);
 
   function handlePrintBatch(items) {
     setPrint({ items });

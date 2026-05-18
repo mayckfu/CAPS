@@ -2189,13 +2189,23 @@
   }
 }
 
+#print-frame {
+  display: none;
+}
+
 /* ===== PRINT ===== */
 @media print {
   @page {
     size: A4 landscape;
-    margin: 8mm 5mm;
+    margin: 5mm; /* Small external margin */
   }
   
+  html, body, #root {
+    height: auto !important;
+    min-height: auto !important;
+    overflow: visible !important;
+  }
+
   body {
     background: #fff !important;
     padding: 0 !important;
@@ -2245,7 +2255,8 @@
   font-family: 'Inter', Arial, sans-serif;
   font-size: 8.5px;
   width: 287mm;
-  padding: 0;
+  padding: 10mm 1.5mm;
+  box-sizing: border-box;
   margin: 0 auto;
   background: #fff;
   color: #000;
@@ -2379,13 +2390,13 @@
 }
 
 .print-page .cb {
-  width: 11px;
-  height: 11px;
+  width: 14px;
+  height: 14px;
   border: 1px solid #000;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 8px;
+  font-size: 11px;
   font-weight: 900;
 }
 
@@ -2444,12 +2455,14 @@
 .print-page .proc-table td.dy {
   width: 14px;
   font-weight: bold;
+  font-size: 9px;
 }
 
 .print-page .proc-table td.tot {
   width: 25px;
   background: #eee;
   font-weight: 900;
+  font-size: 10px;
 }
 
 .print-page .bpa-grid {
