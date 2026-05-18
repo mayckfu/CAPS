@@ -259,6 +259,7 @@ export default function PatientForm({ patient: initial, onBack, profile }) {
   }
 
   async function handleDeleteEntry(id) {
+    if (!isAdmin) return;
     if (!confirm('Excluir esta evolucao do prontuario?')) return;
     await deleteClinicalEntry(id);
     // Removido update manual: listener fará o sync
@@ -647,7 +648,9 @@ export default function PatientForm({ patient: initial, onBack, profile }) {
                             {item.kind === 'clinical' && (
                               <>
                                 <button className="icon-btn" title="Editar evolucao" onClick={() => handleEditEntry(item.entry)}><Pencil size={13} /></button>
-                                <button className="icon-btn danger" title="Excluir evolucao" onClick={() => handleDeleteEntry(item.id)}><Trash2 size={13} /></button>
+                                {isAdmin && (
+                                  <button className="icon-btn danger" title="Excluir evolucao" onClick={() => handleDeleteEntry(item.id)}><Trash2 size={13} /></button>
+                                )}
                               </>
                             )}
                           </div>

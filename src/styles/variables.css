@@ -32,15 +32,23 @@
   --warning: #E65100;
   --warning-light: #FFF3E0;
 
-  /* Sombras */
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
-  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.10);
-  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.12);
+  /* Sombras Modernas e Flutuantes */
+  --shadow-sm: 0 2px 8px rgba(17, 30, 53, 0.04);
+  --shadow-md: 0 6px 20px rgba(17, 30, 53, 0.08);
+  --shadow-lg: 0 16px 38px rgba(17, 30, 53, 0.14);
 
-  /* Raios */
-  --radius-sm: 6px;
-  --radius-md: 10px;
-  --radius-lg: 14px;
+  /* Raios de Borda Suaves */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 18px;
+
+  /* Gradientes Premium */
+  --grad-navy: linear-gradient(135deg, #1A2B4A 0%, #111E35 100%);
+  --grad-blue: linear-gradient(135deg, #1565C0 0%, #0D47A1 100%);
+  --grad-teal: linear-gradient(135deg, #0097A7 0%, #00838F 100%);
+  --grad-light: linear-gradient(135deg, #FFFFFF 0%, #FAFBFD 100%);
+  --grad-success: linear-gradient(135deg, #388E3C 0%, #2E7D32 100%);
+  --grad-danger: linear-gradient(135deg, #D32F2F 0%, #C62828 100%);
 
   /* Sidebar */
   --sidebar-w: 220px;

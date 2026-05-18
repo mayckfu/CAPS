@@ -224,7 +224,7 @@ function RecordMirrorModal({ patient, recordGroup, monthGroups = [], onClose, on
 }
 
 /* Card de resultado de paciente */
-function PatientResult({ patient, onEdit, onNewRecord, onOpenMedicalRecord, onSelectRecord, onDelete, onPrint }) {
+function PatientResult({ patient, onEdit, onNewRecord, onOpenMedicalRecord, onSelectRecord, onDelete, onPrint, profile }) {
   const [records, setRecords] = useState([]);
   const [mirrorRecord, setMirrorRecord] = useState(null);
   const age     = calcAge(patient.dataNasc);
@@ -347,17 +347,19 @@ function PatientResult({ patient, onEdit, onNewRecord, onOpenMedicalRecord, onSe
         </div>
 
         {/* Acoes de exclusao pequenas */}
-        <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              if (confirm(`Excluir ${patient.nome}? Esta ação é irreversível.`)) onDelete(patient.id);
-            }}
-            className="btn btn-danger-ghost"
-          >
-            <Trash2 size={13} />
-          </button>
-        </div>
+        {profile?.role === 'admin' && (
+          <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                if (confirm(`Excluir ${patient.nome}? Esta ação é irreversível.`)) onDelete(patient.id);
+              }}
+              className="btn btn-danger-ghost"
+            >
+              <Trash2 size={13} />
+            </button>
+          </div>
+        )}
         
         {/* Seta de expansao */}
         <div style={{ marginLeft: 8, color: 'var(--text-muted)' }}>
@@ -437,7 +439,7 @@ function PatientResult({ patient, onEdit, onNewRecord, onOpenMedicalRecord, onSe
 }
 
 /* Main CitizenSearch */
-export default function CitizenSearch({ initialContext, onSearchUpdate, onNewPatient, onSelectPatient, onNewRecord, onSelectRecord, onOpenMedicalRecord, onPrint }) {
+export default function CitizenSearch({ initialContext, onSearchUpdate, onNewPatient, onSelectPatient, onNewRecord, onSelectRecord, onOpenMedicalRecord, onPrint, profile }) {
   const [query, setQuery]       = useState(initialContext?.query || '');
   const [searched, setSearched] = useState(initialContext?.searched || false);
   const [results, setResults]   = useState(initialContext?.results || []);
@@ -587,6 +589,7 @@ export default function CitizenSearch({ initialContext, onSearchUpdate, onNewPat
                       onSelectRecord={onSelectRecord}
                       onDelete={handleDelete}
                       onPrint={onPrint}
+                      profile={profile}
                     />
                   ))}
                 </div>

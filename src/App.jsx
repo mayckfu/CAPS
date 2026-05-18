@@ -128,6 +128,7 @@ export default function App() {
               <CitizenSearch
                 initialContext={searchContext}
                 onSearchUpdate={setSearchContext}
+                profile={profile}
                 onNewPatient={() => go('patient-form')}
                 onSelectPatient={p => go('patient-form', { patient: p })}
                 onNewRecord={p => go('record-form', { patient: p })}

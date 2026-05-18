@@ -62,11 +62,46 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
-    // Dados compartilhados da unidade (pacientes, prontuarios, etc)
-    match /{collectionName}/{docId} {
-      allow read, write: if signedIn() 
-        && isKnownSubcollection(collectionName)
+    // Colecoes de dados clinicos e de atendimento da unidade
+    match /patients/{docId} {
+      allow read, create, update: if signedIn() 
         && exists(/databases/$(database)/documents/users/$(request.auth.uid));
+      allow delete: if isAdmin();
+    }
+
+    match /records/{docId} {
+      allow read, create, update: if signedIn() 
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid));
+      allow delete: if isAdmin();
+    }
+
+    match /appointments/{docId} {
+      allow read, create, update: if signedIn() 
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid));
+      allow delete: if isAdmin();
+    }
+
+    match /clinicalEntries/{docId} {
+      allow read, create, update: if signedIn() 
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid));
+      allow delete: if isAdmin();
+    }
+
+    match /professionals/{docId} {
+      allow read: if signedIn() 
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid));
+      allow write: if isAdmin();
+    }
+
+    // Logs de auditoria (LGPD): Totalmente imutaveis.
+    // Qualquer profissional autenticado pode registrar logs em background ao realizar acoes.
+    // Apenas administradores podem ler os logs de auditoria geral.
+    // Ninguem, nem mesmo administrador, pode alterar (update) ou excluir (delete) logs.
+    match /auditLogs/{docId} {
+      allow create: if signedIn() 
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid));
+      allow read: if isAdmin();
+      allow update, delete: if false;
     }
 
     match /{document=**} {
