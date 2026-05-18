@@ -199,10 +199,7 @@ export default function ReportsView({ onPrintBatch }) {
   const topPatients = [...attendedPatients]
     .sort((a, b) => b.totalProcedures - a.totalProcedures)
     .slice(0, 5);
-  const categoryTotals = PROCEDURE_GROUPS.map(group => ({
-    title: group.title,
-    total: groupProcedureTotal(records, group.procedures),
-  })).filter(group => group.total > 0);
+
   const selectedSet = new Set(selectedPatientIds);
   const selectedPatients = attendedPatients.filter(item => selectedSet.has(item.patientId));
   const allSelected = attendedPatients.length > 0 && selectedPatients.length === attendedPatients.length;
@@ -232,62 +229,71 @@ export default function ReportsView({ onPrintBatch }) {
     if (nextMesRef) setMesRef(nextMesRef);
   }
 
+  const riskDistribution = useMemo(() => {
+    let intensivo = 0;
+    let alerta = 0;
+    let habitual = 0;
+    attendedPatients.forEach(item => {
+      const risco = item.patient?.risco || 'habitual';
+      if (risco === 'intensivo') intensivo++;
+      else if (risco === 'alerta') alerta++;
+      else habitual++;
+    });
+    const total = attendedPatients.length || 1;
+    return {
+      intensivo,
+      alerta,
+      habitual,
+      intensivoPct: ((intensivo / total) * 100).toFixed(0),
+      alertaPct: ((alerta / total) * 100).toFixed(0),
+      habitualPct: ((habitual / total) * 100).toFixed(0),
+    };
+  }, [attendedPatients]);
+
   return (
-    <div style={{ padding: '32px 24px', maxWidth: 1200, margin: '0 auto' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 32, gap: 20, flexWrap: 'wrap' }}>
+    <div className="reports-container">
+      <div className="reports-header-wrapper">
         <div>
-          <h1 style={{ margin: 0, fontSize: 28, fontWeight: 800, color: 'var(--text-primary)' }}>
-            Relatorios de Producao
+          <h1 className="reports-title">
+            Relatórios de Produção
           </h1>
-          <p style={{ margin: '8px 0 0', fontSize: 15, color: 'var(--text-muted)' }}>
-            Consolidado mensal da unidade CAPS AD
+          <p className="reports-subtitle">
+            Consolidado mensal e painel de controle clínico da unidade CAPS AD
           </p>
         </div>
 
-        <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-          <div style={{ display: 'flex', alignItems: 'center', height: 48, border: '1px solid var(--border)', background: '#fff', borderRadius: 8, boxShadow: 'var(--shadow-sm)', overflow: 'hidden' }}>
+        <div className="reports-actions">
+          <div className="month-selector-bar">
             <button
-              className="icon-btn"
+              className="month-nav-btn"
               onClick={() => setMesRef(prev => addMonthsToMesRef(prev, -1))}
-              title="Mes anterior"
-              style={{ width: 38, height: 46, borderRadius: 0, borderRight: '1px solid var(--border)' }}
+              title="Mês anterior"
             >
-              <ChevronLeft size={16} />
+              <ChevronLeft size={18} />
             </button>
-            <div style={{ position: 'relative' }}>
-              <Calendar size={16} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
+            <div className="month-input-wrapper">
+              <Calendar size={16} style={{ position: 'absolute', left: 14, color: 'var(--text-secondary)', pointerEvents: 'none' }} />
               <input
                 type="month"
+                className="month-input-field"
                 value={mesRefToMonthInput(mesRef)}
                 onChange={e => updateMonth(e.target.value)}
-                aria-label="Mes do relatorio"
-                style={{
-                  width: 158,
-                  height: 46,
-                  border: 'none',
-                  outline: 'none',
-                  paddingLeft: 38,
-                  paddingRight: 12,
-                  background: '#fff',
-                  color: 'var(--text-primary)',
-                  fontWeight: 700,
-                }}
+                aria-label="Mês do relatório"
               />
             </div>
             <button
-              className="icon-btn"
+              className="month-nav-btn"
               onClick={() => setMesRef(prev => addMonthsToMesRef(prev, 1))}
-              title="Proximo mes"
-              style={{ width: 38, height: 46, borderRadius: 0, borderLeft: '1px solid var(--border)' }}
+              title="Próximo mês"
             >
-              <ChevronRight size={16} />
+              <ChevronRight size={18} />
             </button>
           </div>
           <button
             className="btn btn-primary"
             onClick={printSelectedPatients}
             disabled={selectedPatients.length === 0}
-            style={{ opacity: selectedPatients.length === 0 ? 0.6 : 1 }}
+            style={{ opacity: selectedPatients.length === 0 ? 0.6 : 1, height: 48, borderRadius: 'var(--radius-md)' }}
           >
             <Printer size={16} />
             Imprimir selecionados
@@ -295,151 +301,210 @@ export default function ReportsView({ onPrintBatch }) {
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 20, marginBottom: 24 }}>
-        <div className="card" style={{ padding: 24, display: 'flex', alignItems: 'center', gap: 20 }}>
-          <div style={{ width: 52, height: 52, borderRadius: 14, background: 'var(--blue-light)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--blue)' }}>
-            <Users size={26} />
+      <div className="reports-metrics-grid">
+        <div className="report-metric-card" style={{ '--accent-color': 'var(--teal)' }}>
+          <div className="report-metric-icon-box" style={{ background: 'var(--teal-light)', color: 'var(--teal)' }}>
+            <Users size={24} />
           </div>
-          <div>
-            <p style={{ margin: 0, fontSize: 13, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase' }}>Pacientes no Mes</p>
-            <p style={{ margin: 0, fontSize: 24, fontWeight: 800, color: 'var(--text-primary)' }}>{totalPatients}</p>
-          </div>
-        </div>
-
-        <div className="card" style={{ padding: 24, display: 'flex', alignItems: 'center', gap: 20 }}>
-          <div style={{ width: 52, height: 52, borderRadius: 14, background: 'var(--success-light)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--success)' }}>
-            <ClipboardCheck size={26} />
-          </div>
-          <div>
-            <p style={{ margin: 0, fontSize: 13, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase' }}>Total Procedimentos</p>
-            <p style={{ margin: 0, fontSize: 24, fontWeight: 800, color: 'var(--text-primary)' }}>{totalProcedures}</p>
+          <div className="report-metric-content">
+            <p className="report-metric-label">Pacientes no Mês</p>
+            <p className="report-metric-value">{totalPatients}</p>
           </div>
         </div>
 
-        <div className="card" style={{ padding: 24, display: 'flex', alignItems: 'center', gap: 20 }}>
-          <div style={{ width: 52, height: 52, borderRadius: 14, background: 'var(--warning-light)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--warning)' }}>
-            <BarChart3 size={26} />
+        <div className="report-metric-card" style={{ '--accent-color': 'var(--blue)' }}>
+          <div className="report-metric-icon-box" style={{ background: 'var(--blue-light)', color: 'var(--blue)' }}>
+            <ClipboardCheck size={24} />
           </div>
-          <div>
-            <p style={{ margin: 0, fontSize: 13, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase' }}>Media por Paciente</p>
-            <p style={{ margin: 0, fontSize: 24, fontWeight: 800, color: 'var(--text-primary)' }}>
+          <div className="report-metric-content">
+            <p className="report-metric-label">Total Procedimentos</p>
+            <p className="report-metric-value">{totalProcedures}</p>
+          </div>
+        </div>
+
+        <div className="report-metric-card" style={{ '--accent-color': 'var(--success)' }}>
+          <div className="report-metric-icon-box" style={{ background: 'var(--success-light)', color: 'var(--success)' }}>
+            <BarChart3 size={24} />
+          </div>
+          <div className="report-metric-content">
+            <p className="report-metric-label">Média por Paciente</p>
+            <p className="report-metric-value">
               {totalPatients > 0 ? (totalProcedures / totalPatients).toFixed(1) : 0}
             </p>
           </div>
         </div>
 
-        <div className="card" style={{ padding: 24, display: 'flex', alignItems: 'center', gap: 20 }}>
-          <div style={{ width: 52, height: 52, borderRadius: 14, background: 'var(--teal-light)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--teal)' }}>
-            <ClipboardList size={26} />
+        <div className="report-metric-card" style={{ '--accent-color': 'var(--navy)' }}>
+          <div className="report-metric-icon-box" style={{ background: 'var(--bg-hover)', color: 'var(--navy)' }}>
+            <ClipboardList size={24} />
           </div>
-          <div>
-            <p style={{ margin: 0, fontSize: 13, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase' }}>Fichas com Producao</p>
-            <p style={{ margin: 0, fontSize: 24, fontWeight: 800, color: 'var(--text-primary)' }}>{producedRecords.length}</p>
-          </div>
-        </div>
-
-        <div className="card" style={{ padding: 24, display: 'flex', alignItems: 'center', gap: 20 }}>
-          <div style={{ width: 52, height: 52, borderRadius: 14, background: 'var(--blue-light)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--blue)' }}>
-            <FileBarChart size={26} />
-          </div>
-          <div>
-            <p style={{ margin: 0, fontSize: 13, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase' }}>Procedimentos Diferentes</p>
-            <p style={{ margin: 0, fontSize: 24, fontWeight: 800, color: 'var(--text-primary)' }}>{productionSummary.length}</p>
+          <div className="report-metric-content">
+            <p className="report-metric-label">Fichas Produzidas</p>
+            <p className="report-metric-value">{producedRecords.length}</p>
           </div>
         </div>
 
-        <div className="card" style={{ padding: 24, display: 'flex', alignItems: 'center', gap: 20 }}>
-          <div style={{ width: 52, height: 52, borderRadius: 14, background: 'var(--danger-light)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--danger)' }}>
-            <AlertTriangle size={26} />
+        <div className="report-metric-card" style={{ '--accent-color': 'var(--warning)' }}>
+          <div className="report-metric-icon-box" style={{ background: 'var(--warning-light)', color: 'var(--warning)' }}>
+            <FileBarChart size={24} />
           </div>
-          <div>
-            <p style={{ margin: 0, fontSize: 13, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase' }}>CNS Pendente</p>
-            <p style={{ margin: 0, fontSize: 24, fontWeight: 800, color: 'var(--text-primary)' }}>{missingCnsCount}</p>
+          <div className="report-metric-content">
+            <p className="report-metric-label">Tipos Diferentes</p>
+            <p className="report-metric-value">{productionSummary.length}</p>
+          </div>
+        </div>
+
+        <div className="report-metric-card" style={{ '--accent-color': 'var(--danger)' }}>
+          <div className="report-metric-icon-box" style={{ background: 'var(--danger-light)', color: 'var(--danger)' }}>
+            <AlertTriangle size={24} />
+          </div>
+          <div className="report-metric-content">
+            <p className="report-metric-label">CNS Pendente</p>
+            <p className="report-metric-value">{missingCnsCount}</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="analytics-section-grid">
+        <div className="analytics-card">
+          <h3 className="analytics-card-title">
+            <AlertTriangle size={15} /> Perfil de Acompanhamento
+          </h3>
+          <div className="analytics-card-content">
+            <div className="custom-progress-row">
+              <div className="custom-progress-info">
+                <span>Plano Intensivo (Alto Risco)</span>
+                <span style={{ color: 'var(--danger)' }}>{riskDistribution.intensivo} ({riskDistribution.intensivoPct}%)</span>
+              </div>
+              <div className="custom-progress-bar-bg">
+                <div className="custom-progress-bar-fill" style={{ width: `${riskDistribution.intensivoPct}%`, background: 'var(--grad-danger)' }} />
+              </div>
+            </div>
+
+            <div className="custom-progress-row">
+              <div className="custom-progress-info">
+                <span>Plano em Alerta (Médio Risco)</span>
+                <span style={{ color: 'var(--warning)' }}>{riskDistribution.alerta} ({riskDistribution.alertaPct}%)</span>
+              </div>
+              <div className="custom-progress-bar-bg">
+                <div className="custom-progress-bar-fill" style={{ width: `${riskDistribution.alertaPct}%`, background: 'var(--warning)' }} />
+              </div>
+            </div>
+
+            <div className="custom-progress-row">
+              <div className="custom-progress-info">
+                <span>Plano Habitual (Baixo Risco)</span>
+                <span style={{ color: 'var(--success)' }}>{riskDistribution.habitual} ({riskDistribution.habitualPct}%)</span>
+              </div>
+              <div className="custom-progress-bar-bg">
+                <div className="custom-progress-bar-fill" style={{ width: `${riskDistribution.habitualPct}%`, background: 'var(--grad-success)' }} />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="analytics-card">
+          <h3 className="analytics-card-title">
+            <ClipboardCheck size={15} /> Procedimento Mais Frequente
+          </h3>
+          <div className="analytics-card-content">
+            {topProcedure ? (
+              <div className="top-procedure-highlight">
+                <span className="top-procedure-code">{topProcedure.code}</span>
+                <h4 className="top-procedure-name">{topProcedure.name}</h4>
+                <p className="top-procedure-volume">
+                  {topProcedure.total} <span>realizados</span>
+                </p>
+              </div>
+            ) : (
+              <div className="top-procedure-highlight" style={{ borderStyle: 'none' }}>
+                <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: 13 }}>Sem dados registrados.</p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="analytics-card">
+          <h3 className="analytics-card-title">
+            <BarChart3 size={15} /> Pacientes de Maior Volume
+          </h3>
+          <div className="analytics-card-content">
+            <div className="volume-ranking-list">
+              {topPatients.length === 0 ? (
+                <p style={{ margin: 'auto 0', color: 'var(--text-muted)', fontSize: 13, textAlign: 'center' }}>Sem pacientes registrados no período.</p>
+              ) : topPatients.map(item => (
+                <div key={item.patientId} className="volume-ranking-item">
+                  <span className="volume-ranking-name" title={item.patient.nome}>
+                    {item.patient.nome || 'Paciente Desconhecido'}
+                  </span>
+                  <span className="volume-ranking-badge">
+                    {item.totalProcedures} proc.
+                  </span>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 20, marginBottom: 24 }}>
-        <div className="card" style={{ padding: 20 }}>
-          <p style={{ margin: '0 0 14px', fontSize: 13, color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase' }}>Producao por Grupo</p>
-          {categoryTotals.length === 0 ? (
-            <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: 13 }}>Sem producao registrada.</p>
-          ) : categoryTotals.map(group => (
-            <div key={group.title} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid var(--border)' }}>
-              <span style={{ fontSize: 13, fontWeight: 600 }}>{group.title}</span>
-              <strong style={{ color: 'var(--blue)' }}>{group.total}</strong>
-            </div>
-          ))}
-        </div>
-
-        <div className="card" style={{ padding: 20 }}>
-          <p style={{ margin: '0 0 14px', fontSize: 13, color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase' }}>Procedimento Mais Frequente</p>
-          {topProcedure ? (
-            <>
-              <p style={{ margin: '0 0 6px', fontSize: 14, fontWeight: 800 }}>{topProcedure.name}</p>
-              <p style={{ margin: 0, color: 'var(--text-secondary)', fontSize: 12 }}>{topProcedure.code}</p>
-              <strong style={{ display: 'block', marginTop: 14, fontSize: 24, color: 'var(--blue)' }}>{topProcedure.total}</strong>
-            </>
-          ) : (
-            <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: 13 }}>Sem dados no periodo.</p>
-          )}
-        </div>
-
-        <div className="card" style={{ padding: 20 }}>
-          <p style={{ margin: '0 0 14px', fontSize: 13, color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase' }}>Pacientes com Maior Volume</p>
-          {topPatients.length === 0 ? (
-            <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: 13 }}>Sem pacientes no periodo.</p>
-          ) : topPatients.map(item => (
-            <div key={item.patientId} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, padding: '7px 0', borderBottom: '1px solid var(--border)' }}>
-              <span style={{ fontSize: 13, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.patient.nome || 'Paciente Desconhecido'}</span>
-              <strong style={{ color: 'var(--blue)', flexShrink: 0 }}>{item.totalProcedures}</strong>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <div style={{ display: 'grid', gridTemplateColumns: '1.35fr 1.15fr', gap: 24 }}>
-        <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-          <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', background: 'var(--bg-hover)', display: 'flex', alignItems: 'center', gap: 10 }}>
-            <FileBarChart size={18} color="var(--blue)" />
-            <h3 style={{ margin: 0, fontSize: 15, fontWeight: 700 }}>Producao por Procedimento</h3>
+      <div className="dashboard-grid-layout">
+        <div className="dashboard-panel-card">
+          <div className="dashboard-panel-header">
+            <h3 className="dashboard-panel-title">
+              <FileBarChart size={18} color="var(--blue)" />
+              Produção por Procedimento
+            </h3>
           </div>
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <thead>
-              <tr style={{ background: '#f8fafc', borderBottom: '1px solid var(--border)' }}>
-                <th style={{ textAlign: 'left', padding: '12px 20px', fontSize: 12, color: 'var(--text-muted)', fontWeight: 600 }}>CODIGO</th>
-                <th style={{ textAlign: 'left', padding: '12px 20px', fontSize: 12, color: 'var(--text-muted)', fontWeight: 600 }}>NOME DO PROCEDIMENTO</th>
-                <th style={{ textAlign: 'center', padding: '12px 20px', fontSize: 12, color: 'var(--text-muted)', fontWeight: 600 }}>TOTAL</th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading ? (
-                <tr><td colSpan="3" style={{ padding: 40, textAlign: 'center', color: 'var(--text-muted)' }}>Carregando dados...</td></tr>
-              ) : productionSummary.length === 0 ? (
-                <tr><td colSpan="3" style={{ padding: 40, textAlign: 'center', color: 'var(--text-muted)' }}>Nenhuma producao registrada neste mes.</td></tr>
-              ) : (
-                productionSummary.map((proc, index) => (
-                  <tr key={proc.code} style={{ borderBottom: index === productionSummary.length - 1 ? 'none' : '1px solid var(--border-light)' }}>
-                    <td style={{ padding: '14px 20px', fontSize: 13, fontWeight: 700, color: 'var(--blue)' }}>{proc.code}</td>
-                    <td style={{ padding: '14px 20px', fontSize: 13, color: 'var(--text-primary)' }}>{proc.name}</td>
-                    <td style={{ padding: '14px 20px', fontSize: 15, fontWeight: 800, textAlign: 'center', background: 'var(--blue-light)', color: 'var(--blue)' }}>{proc.total}</td>
+          <div className="premium-table-wrapper">
+            <table className="premium-table">
+              <thead className="premium-table-header">
+                <tr>
+                  <th className="premium-table-th" style={{ width: 110 }}>Código</th>
+                  <th className="premium-table-th">Nome do Procedimento</th>
+                  <th className="premium-table-th" style={{ width: 100, textAlign: 'center' }}>Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                {loading ? (
+                  <tr>
+                    <td colSpan="3" style={{ padding: 40, textAlign: 'center', color: 'var(--text-secondary)' }}>
+                      Carregando dados de produção...
+                    </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+                ) : productionSummary.length === 0 ? (
+                  <tr>
+                    <td colSpan="3" style={{ padding: 40, textAlign: 'center', color: 'var(--text-secondary)' }}>
+                      Nenhuma produção registrada para o período selecionado.
+                    </td>
+                  </tr>
+                ) : (
+                  productionSummary.map((proc, index) => (
+                    <tr key={proc.code} className="premium-table-row">
+                      <td className="premium-table-td premium-table-code">{proc.code}</td>
+                      <td className="premium-table-td" style={{ fontWeight: 600 }}>{proc.name}</td>
+                      <td className="premium-table-td" style={{ textAlign: 'center' }}>
+                        <span className="premium-table-total">{proc.total}</span>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
 
-        <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-          <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', background: 'var(--bg-hover)', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-            <Users size={18} color="var(--blue)" />
-            <h3 style={{ margin: 0, fontSize: 15, fontWeight: 700 }}>Pacientes Atendidos ({attendedPatients.length})</h3>
-            <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
+        <div className="dashboard-panel-card">
+          <div className="dashboard-panel-header">
+            <h3 className="dashboard-panel-title">
+              <Users size={18} color="var(--blue)" />
+              Fichas no Período ({attendedPatients.length})
+            </h3>
+            <div className="dashboard-panel-actions">
               <button
                 className="btn btn-secondary"
                 onClick={toggleAllPatients}
                 disabled={attendedPatients.length === 0}
-                style={{ height: 32, padding: '0 10px', fontSize: 12, gap: 6 }}
+                style={{ height: 34, padding: '0 12px', fontSize: 12.5, borderRadius: 'var(--radius-sm)' }}
               >
                 {allSelected ? <CheckSquare size={14} /> : <Square size={14} />}
                 Selecionar todos
@@ -448,67 +513,64 @@ export default function ReportsView({ onPrintBatch }) {
                 className="btn btn-primary"
                 onClick={printSelectedPatients}
                 disabled={selectedPatients.length === 0}
-                style={{ height: 32, padding: '0 10px', fontSize: 12, gap: 6, opacity: selectedPatients.length === 0 ? 0.6 : 1 }}
+                style={{ height: 34, padding: '0 12px', fontSize: 12.5, borderRadius: 'var(--radius-sm)', opacity: selectedPatients.length === 0 ? 0.6 : 1 }}
               >
                 <Printer size={14} />
-                Imprimir {selectedPatients.length}
+                Imprimir ({selectedPatients.length})
               </button>
             </div>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '28px 1fr 90px 90px 90px', gap: 12, padding: '10px 20px', borderBottom: '1px solid var(--border)', background: '#f8fafc', color: 'var(--text-muted)', fontSize: 11, fontWeight: 800, textTransform: 'uppercase' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '28px 1fr 85px 85px 85px', gap: 12, padding: '10px 20px', borderBottom: '1px solid var(--border)', background: '#f8fafc', color: 'var(--text-muted)', fontSize: 11, fontWeight: 800, textTransform: 'uppercase' }}>
             <span />
             <span>Paciente</span>
             <span>Fichas</span>
             <span>Total</span>
-            <span>Ultima</span>
+            <span>Última</span>
           </div>
 
-          <div style={{ maxHeight: 600, overflowY: 'auto' }}>
+          <div className="premium-patient-list">
             {attendedPatients.map((item, index) => {
               const checked = selectedSet.has(item.patientId);
+              const risk = item.patient?.risco || 'habitual';
+              const riskLabel = risk === 'intensivo' ? 'Intensivo' : risk === 'alerta' ? 'Alerta' : 'Habitual';
               return (
                 <button
                   key={item.patientId}
+                  className={`premium-patient-row ${checked ? 'is-selected' : ''}`}
                   onClick={() => togglePatient(item.patientId)}
-                  style={{
-                    width: '100%',
-                    padding: '12px 20px',
-                    border: 'none',
-                    borderBottom: index === attendedPatients.length - 1 ? 'none' : '1px solid var(--border-light)',
-                    background: checked ? 'var(--blue-light)' : '#fff',
-                    display: 'grid',
-                    gridTemplateColumns: '28px 1fr 90px 90px 90px',
-                    alignItems: 'center',
-                    gap: 12,
-                    textAlign: 'left',
-                  }}
                 >
-                  <div style={{ color: checked ? 'var(--blue)' : 'var(--text-muted)' }}>
+                  <div className={`patient-checkbox ${checked ? 'is-checked' : ''}`}>
                     {checked ? <CheckSquare size={18} /> : <Square size={18} />}
                   </div>
                   <div>
-                    <p style={{ margin: 0, fontSize: 14, fontWeight: 600 }}>{item.patient.nome || 'Paciente Desconhecido'}</p>
-                    <p style={{ margin: 0, fontSize: 11, color: 'var(--text-muted)' }}>
-                      CNS: {item.patient.cns || 'pendente'}
-                      {!item.patient.cns && <span style={{ marginLeft: 8, color: 'var(--danger)', fontWeight: 800 }}>regularizar</span>}
-                    </p>
+                    <p className="patient-info-title">{item.patient.nome || 'Paciente Desconhecido'}</p>
+                    <div className="patient-info-sub">
+                      <span>CNS: {item.patient.cns || 'pendente'}</span>
+                      <span className={`patient-badge-risk risk-${risk}`}>
+                        Plano {riskLabel}
+                      </span>
+                    </div>
                   </div>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-secondary)', background: '#fff', padding: '2px 8px', borderRadius: 4, justifySelf: 'start' }}>
-                    {item.records.length}
+                  <div>
+                    <span className="patient-pill patient-pill-records">
+                      {item.records.length} f.
+                    </span>
                   </div>
-                  <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--blue)', background: '#fff', padding: '2px 8px', borderRadius: 4, justifySelf: 'start' }}>
-                    {item.totalProcedures}
+                  <div>
+                    <span className="patient-pill patient-pill-procedures">
+                      {item.totalProcedures} p.
+                    </span>
                   </div>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-secondary)' }}>
+                  <div className="patient-date-text">
                     {formatShortDate(item.latestDate)}
                   </div>
                 </button>
               );
             })}
             {attendedPatients.length === 0 && !loading && (
-              <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>
-                Sem pacientes com procedimentos neste periodo.
+              <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-secondary)', fontSize: 13 }}>
+                Sem pacientes com procedimentos neste período.
               </div>
             )}
           </div>
@@ -517,3 +579,4 @@ export default function ReportsView({ onPrintBatch }) {
     </div>
   );
 }
+
